@@ -23,18 +23,18 @@ class MyNetwork():
 
         super_feat = self.convergent_update(satlt_feat, super_inputs, level_idx, n_head, attn_drop, ffd_drop, convergent_bias, lower_level_dim, level_dim)
         super_feat = self.btw_super_update(satlt_feat, super_feat, level_idx, n_head, attn_drop, ffd_drop, btw_super_bias, lower_level_dim, level_dim)
-        # satlt_feat = self.divergent_update(satlt_feat, super_feat, level_idx, 1, attn_drop, ffd_drop, divergent_bias, lower_level_dim, level_dim)
+        satlt_feat = self.divergent_update(satlt_feat, super_feat, level_idx, 1, attn_drop, ffd_drop, divergent_bias, lower_level_dim, level_dim)
         
-        satlt_feat_1 = super_feat
-        print("super_feat_1 shape: ", super_feat_1.shape)
-        super_feat_1 = self.convergent_update(satlt_feat_1, super_feat_1, level_idx, n_head, attn_drop, ffd_drop, convergent_bias_1, lower_level_dim, level_dim)
-        super_feat_1 = self.btw_super_update(satlt_feat_1, super_feat_1, level_idx, n_head, attn_drop, ffd_drop, btw_super_bias_1, lower_level_dim, level_dim)
-        satlt_feat_1 = self.divergent_update(satlt_feat_1, super_feat_1, level_idx, n_head, attn_drop, ffd_drop, divergent_bias_1, lower_level_dim, level_dim)
-        super_feat = satlt_feat_1
+        # satlt_feat_1 = super_feat
+        # print("super_feat_1 shape: ", super_feat_1.shape)
+        # super_feat_1 = self.convergent_update(satlt_feat_1, super_feat_1, level_idx, n_head, attn_drop, ffd_drop, convergent_bias_1, lower_level_dim, level_dim)
+        # super_feat_1 = self.btw_super_update(satlt_feat_1, super_feat_1, level_idx, n_head, attn_drop, ffd_drop, btw_super_bias_1, lower_level_dim, level_dim)
+        # satlt_feat_1 = self.divergent_update(satlt_feat_1, super_feat_1, level_idx, n_head, attn_drop, ffd_drop, divergent_bias_1, lower_level_dim, level_dim)
+        # super_feat = satlt_feat_1
 
         # super_feat = self.convergent_update(satlt_feat, super_feat, level_idx, n_head, attn_drop, ffd_drop, convergent_bias, lower_level_dim, level_dim)
-        super_feat = self.btw_super_update(satlt_feat, super_feat, level_idx, n_head, attn_drop, ffd_drop, btw_super_bias, lower_level_dim, level_dim)
-        satlt_feat = self.divergent_update(satlt_feat, super_feat, level_idx, 1, attn_drop, ffd_drop, divergent_bias, lower_level_dim, level_dim)
+        # super_feat = self.btw_super_update(satlt_feat, super_feat, level_idx, n_head, attn_drop, ffd_drop, btw_super_bias, lower_level_dim, level_dim)
+        # satlt_feat = self.divergent_update(satlt_feat, super_feat, level_idx, 1, attn_drop, ffd_drop, divergent_bias, lower_level_dim, level_dim)
 
         satlt_feat = tf.layers.conv1d(satlt_feat, n_classes, 1, use_bias=False)
 

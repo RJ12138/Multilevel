@@ -5,6 +5,7 @@ import os
 
 from network import MyNetwork
 from utils import process
+from graph_coarsen import graph_coarsen
 
 checkpt_file = 'pre_trained/cora/mod_cora.ckpt'
 
@@ -42,11 +43,17 @@ print('model: ' + str(model))
 adj, features, y_train, y_val, y_test, train_mask, val_mask, test_mask = process.load_data(dataset)
 features, spars = process.preprocess_features(features)
 
+print(type(adj))
+print(type(features))
+print(type(y_train))
+print(type(y_val))
+
+
 nb_nodes = features.shape[0]
 ft_size = features.shape[1]
 nb_classes = y_train.shape[1]
 
-adj = adj.todense()
+adj = adj.toarray()
 
 features = features[np.newaxis]
 adj = adj[np.newaxis]
@@ -63,19 +70,33 @@ out_sz = 64
 n_head = 8
 
 np.set_printoptions(threshold=np.inf)
-print(np.max(np.sum(adj[0], axis=1)))
+# print(np.max(np.sum(adj[0], axis=1)))
 
 ## clustering ##
-clustering_mat, convergent_bias, btw_super_bias, divergent_bias, adj_1 = process.sklearn_clustering2(adj, features, clustering_size_firstlevel)
-n_cluster = clustering_mat.shape[1]
-super_feat_zero = np.zeros((batch_size, n_cluster, out_sz * n_head))
+# clustering_mat_0, convergent_bias_0, btw_super_bias_0, divergent_bias_0, adj_1 = process.sklearn_clustering2(adj, features, clustering_size_firstlevel)
+# n_cluster = clustering_mat_0.shape[1]
+# super_feat_zero = np.zeros((batch_size, n_cluster, out_sz * n_head))
 
-clustering_mat_1, convergent_bias_1, btw_super_bias_1, divergent_bias_1, adj_2 = process.sklearn_clustering2(adj_1, None, clustering_size_firstlevel)
-n_cluster_1 = clustering_mat_1.shape[1]
-n_node_1 = n_cluster
-print("n_cluster_1, ", n_cluster_1)
-super_feat_1_zero = np.zeros((batch_size, n_cluster_1, out_sz * n_head))
+# clustering_mat_1, convergent_bias_1, btw_super_bias_1, divergent_bias_1, adj_2 = process.sklearn_clustering2(adj_1, None, clustering_size_firstlevel)
+# n_cluster_1 = clustering_mat_1.shape[1]
+# n_node_1 = n_cluster
+# print("n_cluster_1, ", n_cluster_1)
+# super_feat_1_zero = np.zeros((batch_size, n_cluster_1, out_sz * n_head))
+
+# clustering_mat = [clustering_mat_0, clustering_mat_1]
+# convergent_bias = [convergent_bias_0, convergent_bias_1]
+# btw_super_bias = [btw_super_bias_0, btw_super_bias_1]
+# divergent_bias = [divergent_bias_0, divergent_bias_1]
 ## ---------- ##
+
+## coarsening ##
+clustering_mat, convergent_bias, btw_super_bias, divergent_bias = graph_coarsen(adj[0], features[0].A)
+n_cluster = clustering_mat[0].shape[1]
+n_cluster_1 = clustering_mat[1].shape[1]
+super_feat_zero = np.zeros((batch_size, n_cluster, out_sz * n_head))
+super_feat_1_zero = np.zeros((batch_size, n_cluster_1, out_sz * n_head))
+n_node_1 = n_cluster
+## clustering ##
 
 with tf.Graph().as_default():
     with tf.name_scope('input'):
@@ -151,16 +172,16 @@ with tf.Graph().as_default():
                     feed_dict={
                         ftr_in: features[tr_step*batch_size:(tr_step+1)*batch_size],
                         spft_in: super_feat_zero[tr_step*batch_size:(tr_step+1)*batch_size],
-                        cluster_mat_in: clustering_mat[tr_step*batch_size:(tr_step+1)*batch_size],
-                        conv_bias_in: convergent_bias[tr_step*batch_size:(tr_step+1)*batch_size],
-                        btw_bias_in: btw_super_bias[tr_step*batch_size:(tr_step+1)*batch_size],
-                        div_bias_in: divergent_bias[tr_step*batch_size:(tr_step+1)*batch_size],
+                        cluster_mat_in: clustering_mat[0][tr_step*batch_size:(tr_step+1)*batch_size],
+                        conv_bias_in: convergent_bias[0][tr_step*batch_size:(tr_step+1)*batch_size],
+                        btw_bias_in: btw_super_bias[0][tr_step*batch_size:(tr_step+1)*batch_size],
+                        div_bias_in: divergent_bias[0][tr_step*batch_size:(tr_step+1)*batch_size],
 
                         spft_1_in: super_feat_1_zero[tr_step*batch_size:(tr_step+1)*batch_size],
-                        cluster_mat_1_in: clustering_mat_1[tr_step*batch_size:(tr_step+1)*batch_size],
-                        conv_bias_1_in: convergent_bias_1[tr_step*batch_size:(tr_step+1)*batch_size],
-                        btw_bias_1_in: btw_super_bias_1[tr_step*batch_size:(tr_step+1)*batch_size],
-                        div_bias_1_in: divergent_bias_1[tr_step*batch_size:(tr_step+1)*batch_size],
+                        cluster_mat_1_in: clustering_mat[1][tr_step*batch_size:(tr_step+1)*batch_size],
+                        conv_bias_1_in: convergent_bias[1][tr_step*batch_size:(tr_step+1)*batch_size],
+                        btw_bias_1_in: btw_super_bias[1][tr_step*batch_size:(tr_step+1)*batch_size],
+                        div_bias_1_in: divergent_bias[1][tr_step*batch_size:(tr_step+1)*batch_size],
 
                         lbl_in: y_train[tr_step*batch_size:(tr_step+1)*batch_size],
                         msk_in: train_mask[tr_step*batch_size:(tr_step+1)*batch_size],
@@ -178,16 +199,16 @@ with tf.Graph().as_default():
                     feed_dict={
                         ftr_in: features[vl_step*batch_size:(vl_step+1)*batch_size],
                         spft_in: super_feat_zero[vl_step*batch_size:(vl_step+1)*batch_size],
-                        cluster_mat_in: clustering_mat[vl_step*batch_size:(vl_step+1)*batch_size],
-                        conv_bias_in: convergent_bias[vl_step*batch_size:(vl_step+1)*batch_size],
-                        btw_bias_in: btw_super_bias[vl_step*batch_size:(vl_step+1)*batch_size],
-                        div_bias_in: divergent_bias[vl_step*batch_size:(vl_step+1)*batch_size],
+                        cluster_mat_in: clustering_mat[0][vl_step*batch_size:(vl_step+1)*batch_size],
+                        conv_bias_in: convergent_bias[0][vl_step*batch_size:(vl_step+1)*batch_size],
+                        btw_bias_in: btw_super_bias[0][vl_step*batch_size:(vl_step+1)*batch_size],
+                        div_bias_in: divergent_bias[0][vl_step*batch_size:(vl_step+1)*batch_size],
 
                         spft_1_in: super_feat_1_zero[vl_step*batch_size:(vl_step+1)*batch_size],
-                        cluster_mat_1_in: clustering_mat_1[vl_step*batch_size:(vl_step+1)*batch_size],
-                        conv_bias_1_in: convergent_bias_1[vl_step*batch_size:(vl_step+1)*batch_size],
-                        btw_bias_1_in: btw_super_bias_1[vl_step*batch_size:(vl_step+1)*batch_size],
-                        div_bias_1_in: divergent_bias_1[vl_step*batch_size:(vl_step+1)*batch_size],
+                        cluster_mat_1_in: clustering_mat[1][vl_step*batch_size:(vl_step+1)*batch_size],
+                        conv_bias_1_in: convergent_bias[1][vl_step*batch_size:(vl_step+1)*batch_size],
+                        btw_bias_1_in: btw_super_bias[1][vl_step*batch_size:(vl_step+1)*batch_size],
+                        div_bias_1_in: divergent_bias[1][vl_step*batch_size:(vl_step+1)*batch_size],
 
                         # bias_in: biases[vl_step*batch_size:(vl_step+1)*batch_size],
                         lbl_in: y_val[vl_step*batch_size:(vl_step+1)*batch_size],
@@ -234,16 +255,16 @@ with tf.Graph().as_default():
                 feed_dict={
                     ftr_in: features[ts_step*batch_size:(ts_step+1)*batch_size],
                     spft_in: super_feat_zero[ts_step*batch_size:(ts_step+1)*batch_size],
-                    cluster_mat_in: clustering_mat[ts_step*batch_size:(ts_step+1)*batch_size],
-                    conv_bias_in: convergent_bias[ts_step*batch_size:(ts_step+1)*batch_size],
-                    btw_bias_in: btw_super_bias[ts_step*batch_size:(ts_step+1)*batch_size],
-                    div_bias_in: divergent_bias[ts_step*batch_size:(ts_step+1)*batch_size],
+                    cluster_mat_in: clustering_mat[0][ts_step*batch_size:(ts_step+1)*batch_size],
+                    conv_bias_in: convergent_bias[0][ts_step*batch_size:(ts_step+1)*batch_size],
+                    btw_bias_in: btw_super_bias[0][ts_step*batch_size:(ts_step+1)*batch_size],
+                    div_bias_in: divergent_bias[0][ts_step*batch_size:(ts_step+1)*batch_size],
 
                     spft_1_in: super_feat_1_zero[ts_step*batch_size:(ts_step+1)*batch_size],
-                    cluster_mat_1_in: clustering_mat_1[ts_step*batch_size:(ts_step+1)*batch_size],
-                    conv_bias_1_in: convergent_bias_1[ts_step*batch_size:(ts_step+1)*batch_size],
-                    btw_bias_1_in: btw_super_bias_1[ts_step*batch_size:(ts_step+1)*batch_size],
-                    div_bias_1_in: divergent_bias_1[ts_step*batch_size:(ts_step+1)*batch_size],
+                    cluster_mat_1_in: clustering_mat[1][ts_step*batch_size:(ts_step+1)*batch_size],
+                    conv_bias_1_in: convergent_bias[1][ts_step*batch_size:(ts_step+1)*batch_size],
+                    btw_bias_1_in: btw_super_bias[1][ts_step*batch_size:(ts_step+1)*batch_size],
+                    div_bias_1_in: divergent_bias[1][ts_step*batch_size:(ts_step+1)*batch_size],
 
                     lbl_in: y_test[ts_step*batch_size:(ts_step+1)*batch_size],
                     msk_in: test_mask[ts_step*batch_size:(ts_step+1)*batch_size],
