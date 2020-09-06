@@ -8,16 +8,39 @@ class MyNetwork():
     def __init__(self):
         print("MyNetwork created")
 
-    def inference(self, inputs, super_inputs, level_idx, n_head, n_classes, attn_drop, ffd_drop, clustering_mat, convergent_bias, btw_super_bias, divergent_bias, super_inputs_1, clustering_mat_1, convergent_bias_1, btw_super_bias_1, divergent_bias_1,  lower_level_dim, level_dim=256, activation=tf.nn.elu):
+    def inference(self, inputs, super_inputs, level_idx, n_head, n_classes, attn_drop, ffd_drop, 
+        clustering_mat, convergent_bias, btw_super_bias, divergent_bias, 
+        super_feat_1, clustering_mat_1, convergent_bias_1, btw_super_bias_1, divergent_bias_1, 
+        lower_level_dim, level_dim=256, 
+        activation=tf.nn.elu):
         # this dim is the size of one attention
+
         satlt_feat = inputs
-        super_feat = super_inputs
-        # super_feat = satlt_feat
-        super_feat = self.convergent_update(satlt_feat, super_feat, level_idx, n_head, attn_drop, ffd_drop, convergent_bias, lower_level_dim, level_dim)
-        # super_feat = self.convergent_update(satlt_feat, super_feat, level_idx, n_head, convergent_bias, lower_level_dim, level_dim)
+#         if ffd_drop != 0.0:
+#             satlt_feat = tf.nn.dropout(satlt_feat, 1.0 - ffd_drop)
+
+#         satlt_feat = tf.layers.conv1d(satlt_feat, n_head * level_dim, 1, use_bias=False)
+
+#         super_feat = inputs
+        super_feat = self.convergent_update(satlt_feat, super_inputs, level_idx, n_head, attn_drop, ffd_drop, convergent_bias, lower_level_dim, level_dim)
         super_feat = self.btw_super_update(satlt_feat, super_feat, level_idx, n_head, attn_drop, ffd_drop, btw_super_bias, lower_level_dim, level_dim)
-        # satlt_feat = self.btw_super_update(satlt_feat, super_feat, level_idx  + 1, 1, attn_drop, ffd_drop, btw_super_bias, lower_level_dim, n_classes)
+#         super_feat = self.btw_super_update(satlt_feat, super_feat, level_idx+1, 1, attn_drop, ffd_drop, btw_super_bias, lower_level_dim, 7)
         satlt_feat = self.divergent_update(satlt_feat, super_feat, level_idx, n_head, attn_drop, ffd_drop, divergent_bias, lower_level_dim, level_dim)
+#         satlt_feat = super_feat
+        
+        # satlt_feat_1 = super_feat
+        # print("super_feat_1 shape: ", super_feat_1.shape)
+        # super_feat_1 = self.convergent_update(satlt_feat_1, super_feat_1, level_idx, n_head, attn_drop, ffd_drop, convergent_bias_1, lower_level_dim, level_dim)
+        # super_feat_1 = self.btw_super_update(satlt_feat_1, super_feat_1, level_idx, n_head, attn_drop, ffd_drop, btw_super_bias_1, lower_level_dim, level_dim)
+        # satlt_feat_1 = self.divergent_update(satlt_feat_1, super_feat_1, level_idx, n_head, attn_drop, ffd_drop, divergent_bias_1, lower_level_dim, level_dim)
+        # super_feat = satlt_feat_1
+
+        # super_feat = self.convergent_update(satlt_feat, super_feat, level_idx, n_head, attn_drop, ffd_drop, convergent_bias, lower_level_dim, level_dim)
+        # super_feat = self.btw_super_update(satlt_feat, super_feat, level_idx, n_head, attn_drop, ffd_drop, btw_super_bias, lower_level_dim, level_dim)
+        # satlt_feat = self.divergent_update(satlt_feat, super_feat, level_idx, 1, attn_drop, ffd_drop, divergent_bias, lower_level_dim, level_dim)
+
+        if ffd_drop != 0.0:
+            satlt_feat = tf.nn.dropout(satlt_feat, 1.0 - ffd_drop)
         satlt_feat = tf.layers.conv1d(satlt_feat, n_classes, 1, use_bias=False)
 
         return satlt_feat, super_feat
@@ -49,12 +72,10 @@ class MyNetwork():
         activation=tf.nn.elu, iscoarsen=True):
         # this dim is the size of one attention
         attns = []
-        for j in range(1):
+        for j in range(n_head):
             attns.append(self.attn_head(satlt, supernode, 'divergent', lower_level_dim, level_dim, bias_mat, 
                 activation=activation, name='level'+str(level_idx)+'_attn'+str(j), in_drop=ffd_drop, coef_drop=attn_drop))
         satlt_feat = tf.concat(attns, axis=-1)
-        # satlt_feat = tf.layers.conv1d(satlt_feat, lower_level_dim, 1, use_bias=False, name='level'+str(level_idx)+'_divg', reuse=tf.AUTO_REUSE)
-        # satlt_feat = tf.layers.conv1d(satlt_feat, n_classes, 1, use_bias=False)
 
         return satlt_feat
 
@@ -157,6 +178,7 @@ class MyNetwork():
                     supernode = tf.nn.dropout(supernode, 1.0 - in_drop)
 
                 print("supernode shape: ", supernode.shape)
+                print("satlt shape: ", satlt.shape)
 
                 satlt_fts = tf.layers.conv1d(satlt, higher_level_sz, 1, use_bias=False, name=lineartrans_name[0], reuse=tf.AUTO_REUSE)
                 supernode_fts = tf.layers.conv1d(supernode, higher_level_sz, 1, use_bias=False, name=lineartrans_name[1], reuse=tf.AUTO_REUSE)
@@ -186,7 +208,7 @@ class MyNetwork():
                 
                 if in_drop != 0.0:
                     supernode = tf.nn.dropout(supernode, 1.0 - in_drop)
-                print("supernode sjape: ", supernode.shape)
+                print("supernode shape: ", supernode.shape)
                 supernode_fts = tf.layers.conv1d(supernode, higher_level_sz, 1, use_bias=False, name=lineartrans_name[1], reuse=tf.AUTO_REUSE)
                 # simplest self-attention possible
                 f_1 = tf.layers.conv1d(supernode_fts, 1, 1, name=a_name[0], reuse=tf.AUTO_REUSE)
@@ -206,7 +228,7 @@ class MyNetwork():
             with tf.name_scope('my_divergent_attn'):
 
                 lineartrans_name = [name+'_w1', name+'_w2']
-                a_name = [name+'_a3', name+'_a2']
+                a_name = [name+'_a1', name+'_a2']
                 bias_name = name+'_divergent_bias'
                 
                 if in_drop != 0.0:

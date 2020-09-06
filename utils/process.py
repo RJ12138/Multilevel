@@ -144,8 +144,8 @@ def sklearn_clustering2(adj, feat, cluster_size):
 
 
     else:
-        nb_graphs = feat.shape[0]
-        n_node = feat.shape[1]
+        nb_graphs = adj.shape[0]
+        n_node = adj.shape[1]
         clustering_mat = np.empty((nb_graphs, n_node, n_node))
         convergent_mat = np.empty((nb_graphs, n_node, n_node + n_node))
         btw_super_mat = np.empty((nb_graphs, n_node, n_node))
@@ -155,6 +155,7 @@ def sklearn_clustering2(adj, feat, cluster_size):
         convergent_mat[0] = np.concatenate((clustering_mat[0], np.eye(n_node)), axis=1)
         btw_super_mat[0] = adj[0] + np.eye(n_node)
         divergent_mat[0] = np.concatenate((np.eye(n_node), clustering_mat[0].transpose()), axis=1)
+        adj_next_level = btw_super_mat[0] - np.eye(n_node)
 
 
     # print(np.sum(np.around(btw_super_mat[0]/np.max(btw_super_mat[0], axis=1)+0.2), axis=1))

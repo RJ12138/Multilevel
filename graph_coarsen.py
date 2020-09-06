@@ -44,7 +44,7 @@ def graph_coarsen(adj, feature):
 
     args_fusion = False
     args_coarse = 'simple'
-    args_level = 3
+    args_level = 2
 
     # dataset = args.dataset
     # feature_path = "dataset/{}/{}-feats.npy".format(dataset, dataset)
@@ -85,11 +85,22 @@ def graph_coarsen(adj, feature):
 
     else:
         raise NotImplementedError
-
+    
+#     adjacency_matrices = []
+#     adjacency_last_level = adj
+#     for i in range(len(projections)):
+#         mapping = projections[i].toarray()
+#         adjacency_this_level = mapping.transpose() @ adjacency_last_level @ mapping
+#         adjacency_last_level = adjacency_this_level
+#         adjacency_matrices.append(adjacency_this_level)
+    
     clustering_mat_list = []
     convergent_mat_list = []
     btw_super_mat_list = []
     divergent_mat_list = []
+    
+    print((np.sum(adj, axis=0)))
+    print(np.diag(adj))
 
     for i in range(len(projections)):
         # print(projections[i].toarray().shape)
@@ -117,7 +128,7 @@ def graph_coarsen(adj, feature):
         divergent_mat[0] = np.concatenate((np.eye(n_node), clustering_mat[0].transpose()), axis=1)
 
         n_neighbors = np.sum(btw_super_mat[0] != 0, axis=0)
-        # print((np.sum(btw_super_mat[0], axis=0)))
+        print((np.sum(btw_super_mat[0], axis=0)))
         # print("n_neighbors", n_neighbors)
         # print("diag: ", np.diag(adj[0]))
 

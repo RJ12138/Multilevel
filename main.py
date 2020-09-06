@@ -70,9 +70,9 @@ out_sz = 64
 n_head = 8
 
 np.set_printoptions(threshold=np.inf)
-# print(np.max(np.sum(adj[0], axis=1)))
+print(np.max(np.sum(adj[0], axis=1)))
 
-## clustering ##
+# clustering ##
 # clustering_mat_0, convergent_bias_0, btw_super_bias_0, divergent_bias_0, adj_1 = process.sklearn_clustering2(adj, features, clustering_size_firstlevel)
 # n_cluster = clustering_mat_0.shape[1]
 # super_feat_zero = np.zeros((batch_size, n_cluster, out_sz * n_head))
@@ -82,6 +82,8 @@ np.set_printoptions(threshold=np.inf)
 # n_node_1 = n_cluster
 # print("n_cluster_1, ", n_cluster_1)
 # super_feat_1_zero = np.zeros((batch_size, n_cluster_1, out_sz * n_head))
+
+
 
 # clustering_mat = [clustering_mat_0, clustering_mat_1]
 # convergent_bias = [convergent_bias_0, convergent_bias_1]
@@ -159,10 +161,10 @@ with tf.Graph().as_default():
             # if epoch % 1000 == 0:
             # print(epoch)
 
-            for i in range(n_head):
-                tensor_name = 'level0_attn' + str(i) + '_w2/kernel:0'
-                varvar = sess.graph.get_tensor_by_name(tensor_name)
-                print("tensor_name")
+#             for i in range(n_head):
+#                 tensor_name = 'level0_attn' + str(i) + '_w2/kernel:0'
+#                 varvar = sess.graph.get_tensor_by_name(tensor_name)
+#                 print("tensor_name")
 
             tr_step = 0
             tr_size = features.shape[0]
@@ -219,8 +221,8 @@ with tf.Graph().as_default():
                 val_acc_avg += acc_vl
                 vl_step += 1
 
-            print('Training: loss = %.5f, acc = %.5f | Val: loss = %.5f, acc = %.5f' %
-                    (train_loss_avg/tr_step, train_acc_avg/tr_step,
+            print('The %d epoch: Training: loss = %.5f, acc = %.5f | Val: loss = %.5f, acc = %.5f' %
+                    (epoch, train_loss_avg/tr_step, train_acc_avg/tr_step,
                     val_loss_avg/vl_step, val_acc_avg/vl_step))
 
             if val_acc_avg/vl_step >= vacc_mx or val_loss_avg/vl_step <= vlss_mn:

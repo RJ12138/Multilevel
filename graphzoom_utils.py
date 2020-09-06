@@ -203,21 +203,30 @@ def spec_coarsen(filter_, laplacian):
     col = []
     data = []
     cnt = 0
-    for idx in sorted_idx:
+    for idx_ in sorted_idx:
+        idx = idx_
         if matched[idx]:
             continue
         matched[idx] = True
         cluster = [idx]
-        for n in G.neighbors(idx):
-            if affinity(tv_feat[idx], tv_feat[n]) > thresh and not matched[n]:
-                cluster.append(n)
-                matched[n] = True
+        neighbors = G.neighbors(idx)
+        for n in neighbors:
+            if len(list(neighbors)) < 5:
+                if affinity(tv_feat[idx], tv_feat[n]) > 0.05 and not matched[n]:
+                    cluster.append(n)
+                    matched[n] = True
+            else:
+                if affinity(tv_feat[idx], tv_feat[n]) > thresh and not matched[n]:
+                    cluster.append(n)
+                    matched[n] = True
         row += cluster
         col += [cnt] * len(cluster)
         data += [1] * len(cluster)
         cnt += 1
     mapping = csr_matrix((data, (row, col)), shape=(num_nodes, cnt))
+    print("mapping: ", np.sum(mapping, axis = 0))
     coarse_laplacian = mapping.transpose() @ laplacian @ mapping
+#     print("coarse_laplacian: ", coarse_laplacian)
     return coarse_laplacian, mapping
 
 def sim_coarse(laplacian, level):
@@ -232,7 +241,7 @@ def sim_coarse(laplacian, level):
         np.set_printoptions(threshold=np.inf)
 
         print("max cluter: ", np.max(np.sum(mapping,axis=0)))
-        print(np.sum(mapping,axis=0))
+#         print(np.sum(mapping,axis=0))
 
         print("Coarsening Level:", i+1)
         print("Num of nodes: ", laplacian.shape[0], "Num of edges: ", int((laplacian.nnz - laplacian.shape[0])/2))
