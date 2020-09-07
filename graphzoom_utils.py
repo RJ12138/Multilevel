@@ -198,11 +198,13 @@ def spec_coarsen(filter_, laplacian):
     ## treat hub nodes as seeds
     for (node, val) in G.degree():
         degree_map[node] = val
-    sorted_idx = np.argsort(np.asarray(degree_map))
+    sorted_idx = np.argsort(np.asarray(degree_map))[::-1]
     row = []
     col = []
     data = []
     cnt = 0
+    count_one_matched_neighbor = 0
+    count_neighbor_not_matched = 0
     for idx_ in sorted_idx:
         idx = idx_
         if matched[idx]:
@@ -210,21 +212,26 @@ def spec_coarsen(filter_, laplacian):
         matched[idx] = True
         cluster = [idx]
         neighbors = G.neighbors(idx)
+        neighbor_not_matched = False
         for n in neighbors:
-            if len(list(neighbors)) < 5:
-                if affinity(tv_feat[idx], tv_feat[n]) > 0.05 and not matched[n]:
-                    cluster.append(n)
-                    matched[n] = True
-            else:
-                if affinity(tv_feat[idx], tv_feat[n]) > thresh and not matched[n]:
-                    cluster.append(n)
-                    matched[n] = True
+            if len(list(neighbors)) == 1 and matched[n]:
+                count_one_matched_neighbor += 1
+            if not matched[n]:
+                neighbor_not_matched = True
+            if affinity(tv_feat[idx], tv_feat[n]) > thresh and not matched[n]:
+                cluster.append(n)
+                matched[n] = True
+        if not neighbor_not_matched:
+            count_neighbor_not_matched+=1
         row += cluster
         col += [cnt] * len(cluster)
         data += [1] * len(cluster)
         cnt += 1
+    print("count_one_matched_neighbor ", count_one_matched_neighbor)
+    print("no neighbor to match ", count_neighbor_not_matched)
+    
     mapping = csr_matrix((data, (row, col)), shape=(num_nodes, cnt))
-    print("mapping: ", np.sum(mapping, axis = 0))
+#     print("mapping: ", np.sum(mapping, axis = 0))
     coarse_laplacian = mapping.transpose() @ laplacian @ mapping
 #     print("coarse_laplacian: ", coarse_laplacian)
     return coarse_laplacian, mapping
@@ -232,10 +239,12 @@ def spec_coarsen(filter_, laplacian):
 def sim_coarse(laplacian, level):
     projections = []
     laplacians = []
+    mapping = identity(laplacian.shape[0])
     for i in range(level):
         filter_ = smooth_filter(laplacian, 0.1)
         laplacians.append(laplacian)
-        laplacian, mapping = spec_coarsen(filter_, laplacian)
+        laplacian, map_ = spec_coarsen(filter_, laplacian)
+        mapping = mapping @ map_
         projections.append(mapping)
 
         np.set_printoptions(threshold=np.inf)
@@ -244,7 +253,7 @@ def sim_coarse(laplacian, level):
 #         print(np.sum(mapping,axis=0))
 
         print("Coarsening Level:", i+1)
-        print("Num of nodes: ", laplacian.shape[0], "Num of edges: ", int((laplacian.nnz - laplacian.shape[0])/2))
+#         print("Num of nodes: ", laplacian.shape[0], "Num of edges: ", int((laplacian.nnz - laplacian.shape[0])/2))
 
     laplacians.append(laplacian)
     adjacency = diags(laplacian.diagonal(), 0) - laplacian

@@ -8,8 +8,8 @@ class MyNetwork():
     def __init__(self):
         print("MyNetwork created")
 
-    def inference(self, inputs, super_inputs, level_idx, n_head, n_classes, attn_drop, ffd_drop, clustering_mat, convergent_bias, btw_super_bias, divergent_bias, super_inputs_1, clustering_mat_1, convergent_bias_1, btw_super_bias_1, divergent_bias_1,  lower_level_dim, level_dim=256, activation=tf.nn.elu):
-        # this dim is the size of one attention
+    def inference(self, inputs, super_inputs, level_idx, n_head, n_classes, attn_drop, ffd_drop, clustering_mat, convergent_bias, btw_super_bias, divergent_bias,   lower_level_dim, level_dim=256, activation=tf.nn.elu):
+        # this dim is the size of one attention super_inputs_1, clustering_mat_1, convergent_bias_1, btw_super_bias_1, divergent_bias_1,
         satlt_feat = inputs
         super_feat = super_inputs
         # super_feat = satlt_feat
@@ -150,7 +150,7 @@ class MyNetwork():
                 lineartrans_name = [name+'_w1', name+'_w2']
                 a_name = [name+'_a1', name+'_a2']
                 bias_name = name+'_convergent_bias'
-                print('type satlt: ', type(satlt))
+#                 print('type satlt: ', type(satlt))
                 
                 if in_drop != 0.0:
                     satlt = tf.nn.dropout(satlt, 1.0 - in_drop)
