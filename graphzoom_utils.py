@@ -199,7 +199,7 @@ def spec_coarsen(filter_, laplacian):
     ## treat hub nodes as seeds
     for (node, val) in G.degree():
         degree_map[node] = val
-    sorted_idx = np.argsort(np.asarray(degree_map))
+    sorted_idx = np.argsort(np.asarray(degree_map))[::-1]
     row = []
     col = []
     data = []
@@ -217,8 +217,12 @@ def spec_coarsen(filter_, laplacian):
         neighbor_have_to_match = False
         for n in neighbors:
             # print(len(list(neighbors)))
-            thresh = min(degree_map[idx] * 0.01, 0.3)
-            thresh = min(thresh * degree_map[n] * 0.01, 0.3)
+            thresh = min(degree_map[idx] * 0.1, 0.35)
+            thresh = min(thresh * degree_map[n] * 0.07, 0.35)
+#             thresh = max(0.3 - degree_map[idx] * 0.01, 0)
+#             thresh = max(0.3 - thresh * degree_map[n] * 0.01, 0)
+#             thresh = max(0.3 - degree_map[idx] * 0.01, 0.01)
+#             thresh = min(thresh * degree_map[n] * 0.05, 0.3)
             # print(thresh)
 
             if affinity(tv_feat[idx], tv_feat[n]) > thresh and not matched[n]:
@@ -244,7 +248,7 @@ def spec_coarsen(filter_, laplacian):
     # input('press Enter to continue')
     
     mapping = csr_matrix((data, (row, col)), shape=(num_nodes, cnt))
-    print("mapping: ", np.sum(mapping, axis = 0))
+#     print("mapping: ", np.sum(mapping, axis = 0))
     # print("mapping max: ", np.max(np.sum(mapping, axis = 0)))
     coarse_laplacian = mapping.transpose() @ laplacian @ mapping
 #     print("coarse_laplacian: ", coarse_laplacian)
@@ -259,10 +263,9 @@ def sim_coarse(laplacian, level):
         laplacians.append(laplacian)
         laplacian, map_ = spec_coarsen(filter_, laplacian)
         mapping = mapping @ map_
-        projections.append(mapping)
+        projections.append(map_)
 
         np.set_printoptions(threshold=np.inf)
-
         print("max cluter: ", np.max(np.sum(mapping,axis=0)))
 #         print(np.sum(mapping,axis=0))
 

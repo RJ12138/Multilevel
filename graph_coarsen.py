@@ -138,6 +138,7 @@ def graph_coarsen(adj, feature):
                     btw_super_mat[0,i,j] = 1
                 if i == j:
                     btw_super_mat[0,i,j] = 1
+        print('btw_super_mat:', np.sort(np.sum(btw_super_mat,axis=1)))
 
 
 # clustering_mat, -1e9 * (1.0 - convergent_mat), -1e9 * (1.0 - btw_super_mat), -1e9 * (1.0 - divergent_mat)
