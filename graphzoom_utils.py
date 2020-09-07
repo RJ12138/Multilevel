@@ -7,6 +7,7 @@ from networkx.linalg.laplacianmatrix import laplacian_matrix
 from scipy.io import mmwrite
 from scipy.sparse import csr_matrix, diags, identity, triu, tril
 from itertools import combinations
+import matplotlib.pyplot as plt
 
 def cosine_similarity(x, y):
     flat_array = x.flatten()
@@ -198,13 +199,14 @@ def spec_coarsen(filter_, laplacian):
     ## treat hub nodes as seeds
     for (node, val) in G.degree():
         degree_map[node] = val
-    sorted_idx = np.argsort(np.asarray(degree_map))[::-1]
+    sorted_idx = np.argsort(np.asarray(degree_map))
     row = []
     col = []
     data = []
     cnt = 0
     count_one_matched_neighbor = 0
-    count_neighbor_not_matched = 0
+    count_neighbor_no_to_matched = 0
+    ncolor = ['g'] * num_nodes
     for idx_ in sorted_idx:
         idx = idx_
         if matched[idx]:
@@ -212,26 +214,38 @@ def spec_coarsen(filter_, laplacian):
         matched[idx] = True
         cluster = [idx]
         neighbors = G.neighbors(idx)
-        neighbor_not_matched = False
+        neighbor_have_to_match = False
         for n in neighbors:
-            if len(list(neighbors)) == 1 and matched[n]:
-                count_one_matched_neighbor += 1
-            if not matched[n]:
-                neighbor_not_matched = True
+            # print(len(list(neighbors)))
+            thresh = min(degree_map[idx] * 0.01, 0.3)
+            thresh = min(thresh * degree_map[n] * 0.01, 0.3)
+            # print(thresh)
+
             if affinity(tv_feat[idx], tv_feat[n]) > thresh and not matched[n]:
+            # if not matched[n]:
                 cluster.append(n)
                 matched[n] = True
-        if not neighbor_not_matched:
-            count_neighbor_not_matched+=1
+
+        if len(cluster) == 1:
+            ncolor[idx] = 'k'
+            count_neighbor_no_to_matched += 1
+        # if not neighbor_have_to_match:
+        #     count_neighbor_no_to_matched+=1
+        #     ncolor[idx] = 'b'
         row += cluster
         col += [cnt] * len(cluster)
         data += [1] * len(cluster)
         cnt += 1
     print("count_one_matched_neighbor ", count_one_matched_neighbor)
-    print("no neighbor to match ", count_neighbor_not_matched)
+    print("no neighbor to match ", count_neighbor_no_to_matched)
+
+    # nx.draw(G,pos = nx.spring_layout(G), width = 0.2, node_color = ncolor,edge_color = 'r',with_labels = True, font_size =2,node_size =9)
+    # plt.show()
+    # input('press Enter to continue')
     
     mapping = csr_matrix((data, (row, col)), shape=(num_nodes, cnt))
-#     print("mapping: ", np.sum(mapping, axis = 0))
+    print("mapping: ", np.sum(mapping, axis = 0))
+    # print("mapping max: ", np.max(np.sum(mapping, axis = 0)))
     coarse_laplacian = mapping.transpose() @ laplacian @ mapping
 #     print("coarse_laplacian: ", coarse_laplacian)
     return coarse_laplacian, mapping
